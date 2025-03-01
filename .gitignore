@@ -6,6 +6,15 @@ __pycache__/
 # C extensions
 *.so
 
+# Source materials (potentially copyrighted)
+data/source_materials/
+
+# ell store
+data/ell_store/
+
+# Extracted data
+data/extracted_skills.json
+
 # Distribution / packaging
 .Python
 build/

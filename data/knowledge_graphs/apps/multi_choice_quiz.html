@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        :root {
+            --primary-color: #686de0;
+            --primary-dark: #4834d4;
+            --primary-light: #a3a7e4;
+            --secondary-color: #30336b;
+            --text-color: #f5f6fa;
+            --text-light: #dcdde1;
+            --success-color: #44bd32;
+            --warning-color: #e1b12c;
+            --danger-color: #c23616;
+            --white: #f5f6fa;
+            --border-color: #4834d4;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            --background-dark: #2c2c54;
+            --background-light: #30336b;
+        }
+
+        body {
+            margin: 0;
+            padding: 1rem;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: var(--text-color);
+            line-height: 1.5;
+            background-color: var(--background-dark);
+        }
+
+        #quiz-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        #question-section {
+            background-color: var(--background-light);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        #options-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .option {
+            background-color: var(--background-light);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-color);
+        }
+
+        .option:hover {
+            transform: translateY(-1px);
+            border-color: var(--primary-light);
+            background-color: var(--secondary-color);
+        }
+
+        .option.selected {
+            background-color: var(--primary-color);
+            border-color: var(--primary-light);
+        }
+
+        .option.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+
+        .option.incorrect {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+
+        #submit-button {
+            display: block;
+            width: 100%;
+            max-width: 200px;
+            margin: 1.5rem auto;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        #submit-button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        #submit-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #feedback-section {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 8px;
+            background-color: var(--background-light);
+            box-shadow: var(--shadow);
+        }
+
+        #feedback-section.correct {
+            border-left: 4px solid var(--success-color);
+        }
+
+        #feedback-section.incorrect {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="quiz-container">
+        <div id="question-section"></div>
+        <div id="options-section"></div>
+        <button id="submit-button" class="hidden">Submit Answer</button>
+        <div id="feedback-section" class="hidden"></div>
+    </div>
+    <script>
+        class MultiChoiceQuiz {
+            constructor() {
+                this.questionSection = document.getElementById('question-section');
+                this.optionsSection = document.getElementById('options-section');
+                this.feedbackSection = document.getElementById('feedback-section');
+                this.submitButton = document.getElementById('submit-button');
+                
+                this.selectedOption = null;
+                this.isAnswered = false;
+                this.data = null;
+                
+                // Set up MathJax configuration
+                window.MathJax = {
+                    tex: {
+                        inlineMath: [['\\(', '\\)']]
+                    }
+                };
+                
+                // Load MathJax
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+                document.head.appendChild(script);
+                
+                // Set up resize observer to handle dynamic content changes
+                const resizeObserver = new ResizeObserver(() => {
+                    window.parent.postMessage({
+                        type: 'resize',
+                        height: document.documentElement.scrollHeight
+                    }, '*');
+                });
+                resizeObserver.observe(document.body);
+                
+                // Listen for messages from parent
+                window.addEventListener('message', (event) => {
+                    if (event.data.type === 'initialize') {
+                        this.initialize(event.data.data);
+                    }
+                });
+
+                // Add submit button handler
+                this.submitButton.addEventListener('click', () => this.submitAnswer());
+                
+                // Signal that we're ready to receive data
+                window.parent.postMessage({ type: 'ready' }, '*');
+            }
+            
+            initialize(data) {
+                this.data = data;
+                this.isAnswered = false;
+                this.selectedOption = null;
+                
+                // Set up question
+                this.questionSection.textContent = data.question;
+                
+                // Set up options
+                this.optionsSection.innerHTML = '';
+                data.options.forEach((option, index) => {
+                    const optionElement = document.createElement('div');
+                    optionElement.className = 'option';
+                    optionElement.innerHTML = option;
+                    optionElement.addEventListener('click', () => this.selectOption(index));
+                    this.optionsSection.appendChild(optionElement);
+                });
+                
+                // Reset submit button and feedback
+                this.submitButton.classList.add('hidden');
+                this.submitButton.disabled = true;
+                this.feedbackSection.className = 'hidden';
+                this.feedbackSection.textContent = '';
+                
+                // Render any math in the content
+                if (window.MathJax) {
+                    window.MathJax.typeset();
+                }
+            }
+            
+            selectOption(index) {
+                if (this.isAnswered) return;
+                
+                // Update selection
+                this.selectedOption = index;
+                
+                // Update UI
+                Array.from(this.optionsSection.children).forEach((option, i) => {
+                    option.className = 'option' + (i === index ? ' selected' : '');
+                });
+
+                // Show and enable submit button
+                this.submitButton.classList.remove('hidden');
+                this.submitButton.disabled = false;
+            }
+            
+            submitAnswer() {
+                if (this.isAnswered || this.selectedOption === null) return;
+                
+                this.isAnswered = true;
+                const isCorrect = this.selectedOption === this.data.correct_answer;
+                
+                // Update UI
+                const options = Array.from(this.optionsSection.children);
+                options[this.data.correct_answer].classList.add('correct');
+                if (!isCorrect) {
+                    options[this.selectedOption].classList.add('incorrect');
+                }
+                
+                // Show feedback
+                this.feedbackSection.className = isCorrect ? 'correct' : 'incorrect';
+                this.feedbackSection.textContent = this.data.explanation;
+                this.feedbackSection.classList.remove('hidden');
+
+                // Disable submit button
+                this.submitButton.disabled = true;
+                
+                // Notify parent
+                window.parent.postMessage({
+                    type: 'answerSubmitted',
+                    isCorrect: isCorrect
+                }, '*');
+                
+                // Re-render math if needed
+                if (window.MathJax) {
+                    window.MathJax.typeset();
+                }
+            }
+        }
+
+        // Initialize quiz when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new MultiChoiceQuiz();
+        });
+    </script>
+</body>
+</html> 
