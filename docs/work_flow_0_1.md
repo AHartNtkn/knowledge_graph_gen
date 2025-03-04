@@ -1,3 +1,4 @@
+```mermaid
 flowchart TD
     Start([Source Material + Existing Knowledge Graph]) --> Segment[Segment Source Text into Coherent Units]
     Segment --> ObservableSkills[Extract Observable Skill Candidates]
@@ -119,3 +120,4 @@ flowchart TD
     class ObsPerformanceTest,ObsSingleOp,ObsIsolation,ObsStepForward,ObsDemonstration,IntDistinctInsight,IntSingleInsight,IntContextIsolation,IntMentalStep,IntManifestation,ViabilityCheck,IntuitionEval,PrototypeEval,CycleCheck,OneStepValidation,HierarchicalValidation,FinalDependencyCheck decision;
     class Start,ObsSkillPool,VerifiedObservable,IntSkillPool,VerifiedIntuitive,DefinedSkills,ValidatedPrereqs,AppApproved,FinalizedGraph,End data;
     class phase1,phase2,phase3,phase4,phase5,phase6,phase7,phase8 phase;
+```
